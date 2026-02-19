@@ -1,0 +1,482 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - ExpenseTracker</title>
+    <script type="importmap"></script>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/ExpenseTracker.styles.css" asp-append-version="true" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
+            min-height: 100vh;
+            color: #333;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding-bottom: 80px;
+        }
+        /* Financial Summary Banner */
+
+        .summary-banner {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 20px;
+            cursor: pointer;
+            user-select: none;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .summary-banner-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+            .summary-banner-header h2 {
+                font-size: 1.2rem;
+                font-weight: 600;
+            }
+
+        .banner-quick-info {
+            display: flex;
+            gap: 20px;
+            font-size: 0.9rem;
+            align-items: center;
+        }
+
+        .banner-expand-icon {
+            font-size: 1.5rem;
+            transition: transform 0.3s ease;
+        }
+
+            .banner-expand-icon.expanded {
+                transform: rotate(180deg);
+            }
+
+        .summary-details {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease;
+        }
+
+            .summary-details.expanded {
+                max-height: 1000px;
+                margin-top: 20px;
+            }
+        /* Salary Display */
+
+        .salary-display {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+            .salary-display h3 {
+                font-size: 1rem;
+                opacity: 0.9;
+                margin-bottom: 5px;
+            }
+
+            .salary-display .amount {
+                font-size: 2.5rem;
+                font-weight: bold;
+            }
+
+        .salary-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        th, td {
+            padding: 15px 10px;
+            text-align: left;
+        }
+
+        th {
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 0.5px;
+        }
+
+        tbody tr {
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+            tbody tr:active {
+                background-color: #f5f5f5;
+            }
+
+        .badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+            .badge.weekly {
+                background: #e3f2fd;
+                color: #1976d2;
+            }
+
+            .badge.monthly {
+                background: #f3e5f5;
+                color: #7b1fa2;
+            }
+
+            .badge.quarterly {
+                background: #fff3e0;
+                color: #e65100;
+            }
+
+            .badge.yearly {
+                background: #e8f5e9;
+                color: #2e7d32;
+            }
+
+        .empty-state {
+            text-align: center;
+            padding: 50px 20px;
+            color: #999;
+        }
+
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: 15px;
+            opacity: 0.3;
+        }
+        /* Month History */
+
+        .month-card {
+            background: #f9f9f9;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-left: 5px solid #667eea;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+            .month-card:active {
+                background: #f0f0f0;
+                transform: scale(0.99);
+            }
+
+        .month-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .month-card-title {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .month-card-balance {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+            .month-card-balance.positive {
+                color: #11998e;
+            }
+
+            .month-card-balance.negative {
+                color: #eb3349;
+            }
+
+        .month-card-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .month-card-detail {
+            background: white;
+            padding: 12px;
+            border-radius: 8px;
+        }
+
+            .month-card-detail label {
+                font-size: 0.8rem;
+                color: #666;
+                margin-bottom: 5px;
+            }
+
+            .month-card-detail .value {
+                font-size: 1.2rem;
+                font-weight: bold;
+                color: #333;
+            }
+        /* Modal */
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+            .modal.active {
+                display: flex;
+            }
+
+        .modal-content {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            max-width: 500px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-close {
+            background: #f0f0f0;
+            color: #333;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0;
+        }
+        /* Create Month Report Button */
+
+        .create-report-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-size: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.5);
+            z-index: 90;
+            padding: 0;
+        }
+
+        @@media (max-width: 768px) {
+            .card {
+                margin: 10px;
+                padding: 15px;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            table {
+                font-size: 0.85rem;
+            }
+
+            th, td {
+                padding: 10px 8px;
+            }
+
+            .salary-display {
+                flex-direction: column;
+                text-align: center;
+                gap: 15px;
+            }
+
+                .salary-display .amount {
+                    font-size: 2rem;
+                }
+
+            .month-card-title {
+                font-size: 1.1rem;
+            }
+
+            .month-card-balance {
+                font-size: 1.2rem;
+            }
+
+            .banner-quick-info {
+                flex-direction: column;
+                gap: 5px;
+                align-items: flex-start;
+            }
+        }
+        /* Responsive table for mobile */ @@media (max-width: 600px) {
+            table, thead, tbody, th, td, tr {
+                display: block;
+            }
+
+                thead tr {
+                    position: absolute;
+                    top: -9999px;
+                    left: -9999px;
+                }
+
+            tr {
+                margin-bottom: 15px;
+                border: 1px solid #e0e0e0;
+                border-radius: 8px;
+                padding: 10px;
+            }
+
+            td {
+                border: none;
+                position: relative;
+                padding-left: 50%;
+                text-align: right;
+            }
+
+                td:before {
+                    position: absolute;
+                    left: 10px;
+                    width: 45%;
+                    padding-right: 10px;
+                    white-space: nowrap;
+                    text-align: left;
+                    font-weight: bold;
+                    content: attr(data-label);
+                }
+        }
+
+        .expense-breakdown {
+            display: grid;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .breakdown-item {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+            .breakdown-item h4 {
+                color: #667eea;
+                margin-bottom: 8px;
+                font-size: 1.1rem;
+            }
+
+            .breakdown-item p {
+                color: #666;
+                font-size: 0.95rem;
+                margin: 5px 0;
+            }
+
+            .breakdown-item .amount-large {
+                font-size: 1.3rem;
+                font-weight: bold;
+                color: #333;
+                margin-top: 10px;
+            }
+    </style>
+
+
+
+</head>
+<body>
+    <header>
+        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
+            <div class="container">
+                <a class="navbar-brand" asp-area="" asp-page="/Index">ExpenseTracker</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
+                        aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
+                    <ul class="navbar-nav flex-grow-1">
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-area="" asp-page="/Index">Home</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-area="" asp-page="/Privacy">Privacy</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-area="" asp-page="/Expenses">Expenses</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-area="" asp-page="/AIInsights">AI Insights</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+    <div class="container">
+        <main role="main" class="pb-3">
+            @RenderBody()
+        </main>
+    </div>
+
+    <footer class="border-top footer text-muted">
+        <div class="container">
+            &copy; 2026 - ExpenseTracker - <a asp-area="" asp-page="/Privacy">Privacy</a>
+        </div>
+    </footer>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

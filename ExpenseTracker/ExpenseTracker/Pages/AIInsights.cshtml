@@ -1,0 +1,101 @@
+﻿@page
+@model ExpenseTracker.Pages.AIInsightsModel
+@{
+    ViewData["Title"] = "AI monthlyInsightResponses";
+}
+<form method="post">
+    <button type="submit" class="btn btn-primary">
+        Get AI Insights
+    </button>
+</form>
+@if (Model.monthlyInsightResponse != null)
+{
+
+    <div class="card shadow-sm mt-4">
+        <div class="card-header bg-dark text-white">
+            <h5 class="mb-0">AI Financial monthlyInsightResponses</h5>
+        </div>
+
+        <div class="card-body">
+            @if (Model.monthlyInsightResponse == null)
+            {
+                <div class="text-center mt-3">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p>Generating AI insights...</p>
+                </div>
+            }
+            <!-- Predicted Total -->
+            <div class="row text-center mb-4">
+                <div class="col-md-4">
+                    <div class="p-3 border rounded">
+                        <h6>Predicted Total</h6>
+                        <h3 class="text-primary">
+                            ₹ @Model.monthlyInsightResponse.PredictedTotal
+                        </h3>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="p-3 border rounded">
+                        <h6>Trend</h6>
+                        <h4 class="text-info">
+                            @Model.monthlyInsightResponse.Trend
+                        </h4>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="p-3 border rounded">
+                        <h6>Risk Level</h6>
+                        <h4 class="@(
+                            Model.monthlyInsightResponse.RiskLevel == "High" ? "text-danger" :
+                            Model.monthlyInsightResponse.RiskLevel == "Medium" ? "text-warning" :
+                            "text-success"
+                                                )">
+                            @Model.monthlyInsightResponse.RiskLevel
+                        </h4>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cost Drivers -->
+            <div class="mb-4">
+                <h6>Main Cost Drivers</h6>
+                <ul class="list-group">
+                    @if(Model.monthlyInsightResponse.Drivers != null)
+                    {
+                        @foreach (var driver in Model.monthlyInsightResponse.Drivers)
+                        {
+                            <li class="list-group-item">
+                                🔹 @driver
+                            </li>
+                        }
+                    }
+                </ul>
+            </div>
+
+            <!-- Recommendations -->
+            <div>
+                <h6>Recommendations</h6>
+                <ul class="list-group">
+                    @if (Model.monthlyInsightResponse.Recommendations != null)
+                {
+                    @foreach (var rec in Model.monthlyInsightResponse.Recommendations)
+                    {
+                        <li class="list-group-item list-group-item-success">
+                            💡 @rec
+                        </li>
+                    }
+                }
+                </ul>
+            </div>
+
+        </div>
+    </div>
+}
+else
+{
+    <div class="text-center mt-4">
+        <p class="text-muted">Click "Get AI monthlyInsightResponses" to generate analysis.</p>
+    </div>
+}

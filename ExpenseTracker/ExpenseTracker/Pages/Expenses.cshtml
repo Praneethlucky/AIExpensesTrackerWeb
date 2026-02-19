@@ -1,0 +1,335 @@
+﻿@page
+@model ExpenseTracker.Pages.ExpensesModel
+@{
+}
+<body>
+    <div class="container">
+        <!-- Financial Summary Banner -->
+        <div class="summary-banner" onclick="toggleBanner()">
+            <div class="summary-banner-header">
+                <h2>💰 Financial Summary</h2>
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <div class="banner-quick-info"> <span><strong>Balance:</strong> $<span id="quickBalance">0.00</span></span> </div>
+                    <span class="banner-expand-icon" id="bannerIcon">▼</span>
+                </div>
+            </div>
+            <div class="summary-details" id="summaryDetails">
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <h3>Monthly Salary</h3>
+                        <div class="amount" id="bannerSalary">$0.00</div>
+                    </div>
+                    <div class="summary-item">
+                        <h3>Total Expenses</h3>
+                        <div class="amount" id="bannerExpenses">$0.00</div>
+                    </div>
+                    <div class="summary-item">
+                        <h3>Remaining Balance</h3>
+                        <div class="amount" id="bannerBalance">$0.00</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Tab Navigation -->
+        <div class="tab-navigation"> <button class="tab-button active" onclick="switchTab('dashboard')">🏠 Dashboard</button> <button class="tab-button" onclick="switchTab('bills')">📋 All Bills</button> <button class="tab-button" onclick="switchTab('history')">📊 History</button> <button class="tab-button" onclick="switchTab('salary')">💵 Salary</button> </div>
+        <!-- Dashboard Tab -->
+        <div id="dashboard" class="tab-content active">
+            <div class="card">
+                <h2>📝 Add New Bill</h2>
+                <div class="form-grid">
+                    <div class="form-group"> <label for="billName">Bill Name</label> <input type="text" id="billName" placeholder="e.g., Rent, Netflix"> </div>
+                    <div class="form-group"> <label for="billAmount">Amount</label> <input type="number" id="billAmount" placeholder="e.g., 100" step="0.01"> </div>
+                    <div class="form-group">
+                        <label for="billPeriod">Billing Period</label>
+                        <select id="billPeriod">
+                            <option value="weekly">Weekly</option>
+                            <option value="monthly" selected>Monthly</option>
+                            <option value="quarterly">Quarterly</option>
+                            <option value="yearly">Yearly</option>
+                        </select>
+                    </div>
+                    <div class="form-group"> <label for="billStartDate">Start Date</label> <input type="date" id="billStartDate"> </div>
+                </div>
+                <div class="checkbox-group"> <input type="checkbox" id="isInfinite" checked onchange="toggleEndDate()"> <label for="isInfinite">This bill continues indefinitely</label> </div>
+                <div class="form-group" id="endDateGroup" style="display: none;"> <label for="billEndDate">End Date</label> <input type="date" id="billEndDate"> </div>
+                <button onclick="addBill()">Add Bill</button>
+            </div>
+        </div>
+        <!-- All Bills Tab -->
+        <div id="bills" class="tab-content">
+            <div class="card">
+                <h2>📋 All Bills</h2>
+                <div id="allBillsTable"></div>
+            </div>
+        </div>
+        <!-- History Tab -->
+        <div id="history" class="tab-content">
+            <div class="card">
+                <h2>📊 Monthly Expense History</h2>
+                <p style="color: #666; margin-bottom: 20px;">View all your saved monthly expense reports</p>
+                <div id="monthHistoryList"></div>
+            </div>
+        </div>
+        <!-- Salary Tab -->
+        <div id="salary" class="tab-content">
+            <div class="card">
+                <h2>💵 Monthly Salary</h2>
+                <div id="salaryDisplay"></div>
+            </div>
+        </div>
+        <!-- Floating Create Report Button (only visible on History tab) --> <button class="create-report-btn" id="createReportBtn" style="display: none;" onclick="openCreateReportModal()">+</button>
+    </div>
+    <!-- Create Monthly Report Modal -->
+    <div class="modal" id="createReportModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 style="color: #667eea; margin: 0;">Create Monthly Report</h2>
+                <button class="modal-close" onclick="closeCreateReportModal()">×</button>
+            </div>
+            <div class="form-group"> <label for="reportMonth">Select Month</label> <input type="month" id="reportMonth"> </div>
+            <button onclick="createMonthlyReport()" style="width: 100%; margin-top: 15px;">Generate Report</button>
+        </div>
+    </div>
+    <!-- Edit Salary Modal -->
+    <div class="modal" id="editSalaryModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 style="color: #667eea; margin: 0;">Edit Monthly Salary</h2>
+                <button class="modal-close" onclick="closeEditSalaryModal()">×</button>
+            </div>
+            <div class="form-group"> <label for="editSalaryInput">Monthly Salary</label> <input type="number" id="editSalaryInput" placeholder="e.g., 5000" step="0.01"> </div>
+            <button onclick="updateSalary()" style="width: 100%; margin-top: 15px;">Update Salary</button>
+        </div>
+    </div>
+    <!-- View Month Details Modal -->
+    <div class="modal" id="monthDetailsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 style="color: #667eea; margin: 0;" id="monthDetailsTitle">Month Details</h2>
+                <button class="modal-close" onclick="closeMonthDetailsModal()">×</button>
+            </div>
+            <div id="monthDetailsContent"></div>
+        </div>
+    </div>
+    <script>
+            /* ---------------- TAB SWITCHING ---------------- */
+        function switchTab(tabName, btn) {
+            document.querySelectorAll('.tab-content')
+                .forEach(tab => tab.classList.remove('active'));
+
+            document.querySelectorAll('.tab-button')
+                .forEach(button => button.classList.remove('active'));
+
+            document.getElementById(tabName).classList.add('active');
+            btn.classList.add('active');
+
+            const createBtn = document.getElementById('createReportBtn');
+            createBtn.style.display = tabName === 'history' ? 'flex' : 'none';
+
+            if (tabName === 'salary') displaySalary();
+            if (tabName === 'bills') displayAllBills();
+            if (tabName === 'history') displayMonthHistory();
+
+            updateBanner();
+        }
+
+        /* ---------------- BANNER ---------------- */
+        function toggleBanner() {
+            const details = document.getElementById('summaryDetails');
+            const icon = document.getElementById('bannerIcon');
+            details.classList.toggle('expanded');
+            icon.classList.toggle('expanded');
+        }
+
+        function updateBanner() {
+            const salary = parseFloat(localStorage.getItem('salary') || 0);
+            const reports = JSON.parse(localStorage.getItem('monthlyReports') || '[]');
+
+            const today = new Date();
+            const key = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+            const report = reports.find(r => r.monthKey === key);
+
+            const expenses = report ? report.totalExpenses : 0;
+            const balance = salary - expenses;
+
+            document.getElementById('quickBalance').textContent = balance.toFixed(2);
+            document.getElementById('bannerSalary').textContent = `$${salary.toFixed(2)}`;
+            document.getElementById('bannerExpenses').textContent = `$${expenses.toFixed(2)}`;
+            document.getElementById('bannerBalance').textContent = `$${balance.toFixed(2)}`;
+        }
+
+        /* ---------------- SALARY ---------------- */
+        function displaySalary() {
+            const salary = parseFloat(localStorage.getItem('salary') || 0);
+            const container = document.getElementById('salaryDisplay');
+
+            if (!salary) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">💵</div>
+                        <p>No salary set</p>
+                        <button onclick="openEditSalaryModal()">Set Salary</button>
+                    </div>`;
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="salary-display">
+                    <div>
+                        <h3>Monthly Salary</h3>
+                        <div class="amount">$${salary.toFixed(2)}</div>
+                    </div>
+                    <button onclick="openEditSalaryModal()">Edit</button>
+                </div>`;
+        }
+
+        function openEditSalaryModal() {
+            document.getElementById('editSalaryInput').value =
+                localStorage.getItem('salary') || '';
+            document.getElementById('editSalaryModal').classList.add('active');
+        }
+
+        function closeEditSalaryModal() {
+            document.getElementById('editSalaryModal').classList.remove('active');
+        }
+
+        function updateSalary() {
+            const salary = parseFloat(editSalaryInput.value) || 0;
+            localStorage.setItem('salary', salary);
+            closeEditSalaryModal();
+            displaySalary();
+            updateBanner();
+        }
+
+        /* ---------------- BILLS ---------------- */
+        function toggleEndDate() {
+            endDateGroup.style.display =
+                isInfinite.checked ? 'none' : 'block';
+        }
+
+        function addBill() {
+            const name = billName.value.trim();
+            const amount = parseFloat(billAmount.value);
+            const period = billPeriod.value;
+            const startDate = billStartDate.value;
+            const infinite = isInfinite.checked;
+            const endDate = infinite ? null : billEndDate.value;
+
+            if (!name || !amount || !startDate) {
+                alert("Invalid bill details");
+                return;
+            }
+
+            const bills = JSON.parse(localStorage.getItem('bills') || '[]');
+
+            bills.push({
+                id: Date.now(),
+                name,
+                amount,
+                period,
+                startDate,
+                endDate,
+                isInfinite: infinite
+            });
+
+            localStorage.setItem('bills', JSON.stringify(bills));
+            billName.value = billAmount.value = "";
+            updateBanner();
+        }
+
+        function deleteBill(id) {
+            let bills = JSON.parse(localStorage.getItem('bills') || '[]');
+            bills = bills.filter(b => b.id !== id);
+            localStorage.setItem('bills', JSON.stringify(bills));
+            displayAllBills();
+            updateBanner();
+        }
+
+        function displayAllBills() {
+            const bills = JSON.parse(localStorage.getItem('bills') || '[]');
+            const container = document.getElementById('allBillsTable');
+
+            if (!bills.length) {
+                container.innerHTML = "<p>No bills added</p>";
+                return;
+            }
+
+            container.innerHTML = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th><th>Amount</th>
+                            <th>Period</th><th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${bills.map(b => `
+                            <tr>
+                                <td>${b.name}</td>
+                                <td>$${b.amount.toFixed(2)}</td>
+                                <td><span class="badge ${b.period}">${b.period}</span></td>
+                                <td>
+                                    <button onclick="deleteBill(${b.id})">Delete</button>
+                                </td>
+                            </tr>`).join("")}
+                    </tbody>
+                </table>`;
+        }
+
+        /* ---------------- MONTHLY REPORT ---------------- */
+        function createMonthlyReport() {
+            const monthValue = reportMonth.value;
+            if (!monthValue) return;
+
+            const [year, month] = monthValue.split('-').map(Number);
+            const salary = parseFloat(localStorage.getItem('salary') || 0);
+            const bills = JSON.parse(localStorage.getItem('bills') || '[]');
+
+            let total = bills.reduce((s, b) => s + b.amount, 0);
+
+            const reports = JSON.parse(localStorage.getItem('monthlyReports') || '[]');
+
+            reports.unshift({
+                monthKey: monthValue,
+                year,
+                month,
+                salary,
+                totalExpenses: total,
+                balance: salary - total,
+                createdAt: new Date().toISOString()
+            });
+
+            localStorage.setItem('monthlyReports', JSON.stringify(reports));
+            displayMonthHistory();
+            updateBanner();
+        }
+
+        /* ---------------- HISTORY ---------------- */
+        function displayMonthHistory() {
+            const reports = JSON.parse(localStorage.getItem('monthlyReports') || '[]');
+            const container = document.getElementById('monthHistoryList');
+
+            if (!reports.length) {
+                container.innerHTML = "<p>No reports yet</p>";
+                return;
+            }
+
+            container.innerHTML = reports.map(r => `
+                <div class="month-card">
+                    <h3>${r.monthKey}</h3>
+                    <p>Salary: $${r.salary.toFixed(2)}</p>
+                    <p>Expenses: $${r.totalExpenses.toFixed(2)}</p>
+                    <p>Balance: $${r.balance.toFixed(2)}</p>
+                </div>
+            `).join("");
+        }
+
+        /* ---------------- INIT ---------------- */
+        document.addEventListener('DOMContentLoaded', () => {
+            billStartDate.value = new Date().toISOString().split('T')[0];
+            displaySalary();
+            updateBanner();
+        });
+
+    </script>
+</body>
