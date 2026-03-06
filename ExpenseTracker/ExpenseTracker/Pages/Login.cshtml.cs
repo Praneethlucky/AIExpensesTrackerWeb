@@ -1,61 +1,59 @@
-using ExpenseTracker.ConnectionsFactory;
+using ExpenseTracker.API.Services;
+using ExpenseTracker.Web.HttpRequests;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using System.ComponentModel.DataAnnotations;
 
-public class LoginModel : PageModel
+namespace ExpenseTracker.Pages
 {
-    private readonly UserService _userService;
-
-    public LoginModel(UserService userService)
+    public class LoginModel : PageModel
     {
-        _userService = userService;
-    }
+        private readonly GetRequests _getRequests;
 
-    [BindProperty]
-    [Required, EmailAddress]
-    public string Email { get; set; }
-
-    [BindProperty]
-    [Required]
-    public string Password { get; set; }
-
-    public string ErrorMessage { get; set; }
-
-    [BindProperty(SupportsGet = true)]
-    public bool Timeout { get; set; }
-
-    [BindProperty(SupportsGet = true)]
-    public string ReturnUrl { get; set; } = null;
-
-    public void OnGet()
-    {
-        HttpContext.Session.Clear();
-        
-        if (Timeout)
+        public LoginModel(GetRequests getRequests)
         {
-            ErrorMessage = "Your session expired due to idle timeout. Please log in again.";
-        }
-    }
-
-
-    public async Task<IActionResult> OnPostAsync()
-    {
-        var user = await _userService.GetByEmailAsync(Email);
-
-        if (user == null ||
-            !PasswordHasher.Verify(Password, user.Value.PasswordHash))
-        {
-            ErrorMessage = "Invalid email or password";
-            return Page();
-        }
-        HttpContext.Session.SetString("IsLoggedIn", "true");
-        if (!string.IsNullOrEmpty(ReturnUrl))
-        {
-            return Redirect(ReturnUrl);
+            _getRequests = getRequests;
         }
 
-        // TEMP: redirect after successful login
-        return RedirectToPage("/Expenses");
+        [BindProperty]
+        [Required, EmailAddress]
+        public string Email { get; set; }
+
+        [BindProperty]
+        [Required]
+        public string Password { get; set; }
+
+        public string ErrorMessage { get; set; }
+
+        [BindProperty(SupportsGet = true)]
+        public bool Timeout { get; set; }
+
+        [BindProperty(SupportsGet = true)]
+        public string ReturnUrl { get; set; } = null;
+
+        public void OnGet()
+        {
+            HttpContext.Session.Clear();
+
+            if (Timeout)
+            {
+                ErrorMessage = "Your session expired due to idle timeout. Please log in again.";
+            }
+        }
+
+        public void OnPost()
+        {
+            var result = _getRequests.GetAsync<bool>($"https://localhost:44373/user/login?email={Email}&password={Password}").Result;
+            if (result)
+            {
+                HttpContext.Session.SetString("IsLoggedIn", "true");
+                HttpContext.Session.SetInt32("UserId", 1);
+                RedirectToPage(ReturnUrl ?? "/Bills");
+            }
+            else
+            {
+                ErrorMessage = "Invalid email or password.";
+            }
+        }
     }
 }

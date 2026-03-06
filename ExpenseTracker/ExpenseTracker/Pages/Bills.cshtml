@@ -1,0 +1,89 @@
+﻿@page
+@model ExpenseTracker.Web.Pages.BillsModel
+@{
+    ViewData["Title"] = "Bills";
+}
+
+<h2 class="mb-4">My Bills</h2>
+
+<!-- Add Bill Card -->
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-primary text-white">
+        Add New Bill
+    </div>
+    <div class="card-body">
+
+        <form method="post">
+            <div class="row g-3">
+
+                <div class="col-md-4">
+                    <input asp-for="NewBill.Category"
+                           class="form-control"
+                           placeholder="Category" />
+                </div>
+
+                <div class="col-md-3">
+                    <input asp-for="NewBill.Amount"
+                           class="form-control"
+                           placeholder="Amount" />
+                </div>
+
+                <div class="col-md-3">
+                    <select asp-for="NewBill.Frequency"
+                            class="form-select">
+                        <option>Monthly</option>
+                        <option>Weekly</option>
+                        <option>Yearly</option>
+                    </select>
+                </div>
+
+                <div class="col-md-2">
+                    <button type="submit"
+                            class="btn btn-success w-100">
+                        Add
+                    </button>
+                </div>
+
+            </div>
+        </form>
+
+    </div>
+</div>
+
+<!-- Bills List -->
+<div class="card shadow-sm">
+    <div class="card-header bg-dark text-white">
+        Active Bills
+    </div>
+
+    <div class="card-body">
+
+        @if (Model.Bills != null && Model.Bills.Any())
+        {
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Category</th>
+                        <th>Amount</th>
+                        <th>Frequency</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var bill in Model.Bills)
+                    {
+                        <tr>
+                            <td>@bill.Category</td>
+                            <td>₹ @bill.Amount</td>
+                            <td>@bill.Frequency</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <p class="text-muted">No bills added yet.</p>
+        }
+
+    </div>
+</div>

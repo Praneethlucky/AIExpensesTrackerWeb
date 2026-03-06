@@ -1,0 +1,15 @@
+[
+  {
+    "Name": "New Profile",
+    "Projects": [
+      {
+        "Path": "ExpenseTracker\\ExpenseTracker.Web.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "ExpenseTracker.API\\ExpenseTracker.API.csproj",
+        "Action": "Start"
+      }
+    ]
+  }
+]

@@ -1,6 +1,6 @@
-using ExpenseTracker.ConnectionsFactory;
+using ExpenseTracker.API.ConnectionsFactory;
 using ExpenseTracker.Models;
-using ExpenseTracker.Services;
+using ExpenseTracker.API.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using System.Text.Json;
