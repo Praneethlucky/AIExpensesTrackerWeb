@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace ExpenseTracker.Domain.Entities;
+namespace ExpenseTracker.Infrastructure.Entities;
 
 public class User
 {
@@ -19,8 +19,7 @@ public class User
     public string PasswordHash { get; private set; }
 
     [Range(0, double.MaxValue)]
-    public decimal Salary { get; private set; }
-
+    public decimal CurrentSalary { get; private set; }
     public bool IsActive { get; private set; }
 
     public DateTime CreatedAt { get; private set; }
@@ -35,19 +34,34 @@ public class User
         FullName = fullName;
         Email = email;
         PasswordHash = passwordHash;
-        Salary = salary;
+        CurrentSalary = salary;
         IsActive = true;
         CreatedAt = DateTime.UtcNow;
     }
 
     public void UpdateSalary(decimal newSalary)
     {
-        Salary = newSalary;
+        CurrentSalary = newSalary;
         UpdatedAt  = DateTime.UtcNow;
     }
-
+    public void UpdatePassword(string password)
+    {
+        PasswordHash = password;
+        UpdatedAt  = DateTime.UtcNow;
+    }
+    public void UpdateName(string name)
+    {
+        FullName = name;
+        UpdatedAt  = DateTime.UtcNow;
+    }
+    public void UpdateEmail(string email)
+    {
+        Email = email;
+        UpdatedAt = DateTime.UtcNow;
+    }    
     public void Deactivate()
     {
         IsActive = false;
     }
+
 }

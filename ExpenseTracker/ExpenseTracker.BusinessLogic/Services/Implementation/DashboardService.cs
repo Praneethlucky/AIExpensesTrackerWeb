@@ -1,4 +1,4 @@
-﻿using ExpenseTracker.Domain.Interfaces;
+﻿using ExpenseTracker.Infrastructure.Interfaces;
 using ExpenseTracker.BusinessLogic.Interfaces;
 
 public class DashboardService : IDashboardService
@@ -17,17 +17,13 @@ public class DashboardService : IDashboardService
     public async Task<DashboardSummaryDto> GetDashboardAsync(
         int userId, int year, int month)
     {
-        var bills = await _billRepository.GetMonthlyBillsAsync(userId, year, month);
         var user = await _userRepository.GetByIdAsync(userId);
 
-        var total = bills.Sum(x => x.Amount);
 
         return new DashboardSummaryDto
         {
-            Salary = user.Salary,
-            TotalExpenses = total,
-            PredictedNextMonth = total * 1.05m,
-            RiskLevel = total > user.Salary ? "High" : "Normal"
+            Salary = user.CurrentSalary
+            
         };
     }
 }

@@ -1,11 +1,24 @@
-﻿namespace ExpenseTracker.Domain.Interfaces;
-
-using ExpenseTracker.Domain.Entities;
+﻿using ExpenseTracker.Domain.Entities;
 
 public interface IBillRepository
 {
-    Task<bool> InsertAsync(Bill bill);
-    Task<List<Bill>> GetActiveBillsAsync(int userId);
-    Task<List<Bill>> GetMonthlyBillsAsync(int userId, int year, int month);
-    Task<bool> DeleteAsync(int billId, int userId);
+    Task<bool> ExistsAsync(
+        int userId,
+        string name);
+
+    Task<int> InsertBillAsync(
+        Bill bill);
+
+    Task InsertRuleAsync(
+        RecurringRule rule);
+
+    Task<List<Bill>> GetAllAsync(
+        int userId);
+
+    Task UpdateAsync(
+        Bill bill);
+
+    Task DeleteAsync(
+        int billId,
+        int userId);
 }

@@ -1,50 +1,99 @@
-﻿using ExpenseTracker.BusinessLogic.Interfaces;
-using Microsoft.AspNetCore.Mvc;
+﻿using Azure;
+using ExpenseTracker.API.Controllers;
 using ExpenseTracker.BusinessLogic.Common;
+using ExpenseTracker.BusinessLogic.DTOs.Bills;
+using ExpenseTracker.BusinessLogic.Interfaces;
+using ExpenseTracker.Domain.DTOs.Bills;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
-
+[Authorize]
 [ApiController]
-[Route("api/[controller]")]
-public class BillsController : ControllerBase
+[Route("api/bills")]
+public class BillsController : BaseController
 {
-    private readonly IBillService _billService;
+    private readonly IBillService _service;
 
-    public BillsController(IBillService billService)
+    public BillsController(IBillService service)
     {
-        _billService = billService;
+        _service = service;
     }
 
     [HttpPost]
-    public async Task<IActionResult> CreateBill(
-        [FromBody] BillCreateDto dto)
+    public async Task<ApiResponse<int>> Create(
+        CreateBillDto dto)
     {
-        var result = await _billService.CreateBillAsync(dto);
+        try
+        {
 
-        return Ok(ApiResponse<BillResponseDto>
-            .SuccessResponse(result, "Bill created"));
+            var id = await _service.CreateAsync(
+                UserId,
+                dto);
+
+            return ApiResponse<int>
+                .SuccessResponse(id);
+        }
+        catch (Exception ex)
+        {
+            return ApiResponse<int>
+                .FailureResponse(
+                    ex.Message,
+                    "Create failed");
+        }
     }
 
-    [HttpGet("{userId}")]
-    public async Task<IActionResult> GetBills(int userId)
+    [HttpGet]
+    public async Task<ApiResponse<List<BillDto>>> GetAll()
     {
-        var bills = await _billService.GetUserBillsAsync(userId);
+        try
+        {
 
-        return Ok(ApiResponse<List<BillCreateDto>>
-            .SuccessResponse(bills));
+            var data =
+                await _service.GetAllAsync(UserId);
+
+            return ApiResponse<List<BillDto>>
+                .SuccessResponse(data);
+        }
+        catch (Exception ex)
+        {
+            return ApiResponse<List<BillDto>>
+                .FailureResponse(
+                    ex.Message,
+                    "Fetch failed");
+        }
     }
 
-    [HttpDelete("{billId}/{userId}")]
-    public async Task<IActionResult> DeleteBill(
-        int billId,
-        int userId)
+    [HttpPut]
+    public async Task<IActionResult> Update(UpdateBillDto updateBill)
     {
-        var success = await _billService.DeleteBillAsync(billId, userId);
+        try
+        {
+            await _service.UpdateAsync(UserId, updateBill);
+            return Ok(ApiResponse<object>.SuccessResponse("Updated Bill successfully"));
+        }
+        catch (Exception ex)
+        {
+            return Ok(ApiResponse<object>.FailureResponse("Update Failed"));
 
-        if (!success)
-            return NotFound(ApiResponse<string>
-                .FailureResponse(new List<string> { "Bill not found" }));
+        }
+    }
 
-        return Ok(ApiResponse<string>
-            .SuccessResponse("Bill deleted"));
+
+    [HttpDelete]
+    public async Task<IActionResult> Delete([FromBody]int id)
+    {
+        try
+        {
+
+                await _service.DeleteAsync(UserId, id);
+
+            return Ok(ApiResponse<object>.SuccessResponse("Deleted Bill"));
+
+        }
+        catch (Exception ex)
+        {
+            return Ok(ApiResponse<object>.FailureResponse("Delete Failed"));
+
+        }
     }
 }

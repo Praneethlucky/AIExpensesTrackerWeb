@@ -1,6 +1,6 @@
 ﻿using System.Net.Http.Json;
 using Microsoft.Extensions.Options;
-using ExpenseTracker.Domain.Interfaces;
+using ExpenseTracker.Infrastructure.Interfaces;
 using ExpenseTracker.Infrastructure.Configuration;
 
 namespace ExpenseTracker.Infrastructure.AI;

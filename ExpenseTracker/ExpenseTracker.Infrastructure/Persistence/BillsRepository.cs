@@ -1,162 +1,197 @@
 ﻿using ExpenseTracker.Domain.Entities;
-using ExpenseTracker.Domain.Interfaces;
-using ExpenseTracker.Infrastructure.Configuration;
+using ExpenseTracker.Infrastructure.Persistence;
 using Microsoft.Data.SqlClient;
-using Microsoft.Extensions.Options;
-using System.Data;
-
-namespace ExpenseTracker.Infrastructure.Persistence;
 
 public class BillRepository : IBillRepository
 {
-    private readonly string _connectionString;
+    private readonly ConnectionFactory _factory;
 
-    public BillRepository(IOptions<DatabaseSettings> options)
+    public BillRepository(
+        ConnectionFactory factory)
     {
-        _connectionString = options.Value.AzureSql;
+        _factory = factory;
     }
 
-    public async Task<bool> InsertAsync(Bill bill)
+    public async Task<bool> ExistsAsync(
+        int userId,
+        string name)
     {
-        const string sql = """
-        INSERT INTO Bills
-        (UserId, Category, Description, Amount, Frequency, StartDate, EndDate, IsActive)
-        VALUES
-        (@UserId, @Category, @Description, @Amount, @Frequency, @StartDate, @EndDate, 1)
-        """;
+        using var con = _factory.CreateConnection();
 
-        using var conn = new SqlConnection(_connectionString);
-        using var cmd = new SqlCommand(sql, conn);
+        using var cmd = new SqlCommand(
+        @"SELECT COUNT(1)
+          FROM Bills
+          WHERE UserId=@u
+          AND Name=@n
+          AND IsActive=1",
+        con);
 
-        cmd.Parameters.AddWithValue("@UserId", bill.UserId);
-        cmd.Parameters.AddWithValue("@Category", bill.Category);
-        cmd.Parameters.AddWithValue("@Description", bill.Description ?? (object)DBNull.Value);
-        cmd.Parameters.AddWithValue("@Amount", bill.Amount);
-        cmd.Parameters.AddWithValue("@Frequency", bill.Frequency);
-        cmd.Parameters.AddWithValue("@StartDate", bill.StartDate);
-        cmd.Parameters.AddWithValue("@EndDate", bill.EndDate ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue("@u", userId);
+        cmd.Parameters.AddWithValue("@n", name);
 
-        await conn.OpenAsync();
-        var rows = await cmd.ExecuteNonQueryAsync();
+        await con.OpenAsync();
 
-        return rows > 0;
+        return (int)await cmd.ExecuteScalarAsync() > 0;
     }
 
-    public async Task<List<Bill>> GetActiveBillsAsync(int userId)
+    public async Task<int> InsertBillAsync(
+        Bill bill)
     {
-        const string sql = @"
-        SELECT BillId, UserId, Category, Description,
-               Amount, Frequency, StartDate, EndDate,
-               IsActive, CreatedAt, UpdatedAt
-        FROM Bills
-        WHERE UserId = @UserId
-          AND IsActive = 1";
+        using var con = _factory.CreateConnection();
 
-        var bills = new List<Bill>();
+        using var cmd = new SqlCommand(
+        @"INSERT INTO Bills
+          (UserId,Name,Amount, Frequency,
+           CategoryId,PaymentTypeId,
+           IsActive,CreatedAt)
+          OUTPUT INSERTED.BillId
+          VALUES
+          (@u,@n,@a, @f,@c,@p,1,GETUTCDATE())",
+        con);
 
-        using var conn = new SqlConnection(_connectionString);
-        using var cmd = new SqlCommand(sql, conn);
+        cmd.Parameters.AddWithValue("@u", bill.UserId);
+        cmd.Parameters.AddWithValue("@n", bill.Name);
+        cmd.Parameters.AddWithValue("@a", bill.Amount);
+        cmd.Parameters.AddWithValue("@f", bill.Frequency);
+        cmd.Parameters.AddWithValue("@c", bill.CategoryId);
+        cmd.Parameters.AddWithValue("@p", bill.PaymentTypeId);
 
-        cmd.Parameters.Add("@UserId", SqlDbType.Int).Value = userId;
+        await con.OpenAsync();
 
-        await conn.OpenAsync();
-        using var reader = await cmd.ExecuteReaderAsync();
+        return (int)await cmd.ExecuteScalarAsync();
+    }
+
+    public async Task InsertRuleAsync(
+        RecurringRule rule)
+    {
+        using var con = _factory.CreateConnection();
+
+        using var cmd = new SqlCommand(
+        @"INSERT INTO RecurringRules
+          (BillId,Frequency,StartDate,
+           DayOfMonth,DayOfWeek,
+           MonthOfYear,EndDate,NextRunDate,IsActive)
+          VALUES
+          (@b,@f,@s,@dom,@dow,@moy,@e,@nrd,1)",
+        con);
+
+        cmd.Parameters.AddWithValue("@b", rule.BillId);
+        cmd.Parameters.AddWithValue("@f", rule.Frequency);
+        cmd.Parameters.AddWithValue("@s", rule.StartDate);
+
+        cmd.Parameters.AddWithValue(
+            "@dom",
+            (object?)rule.DayOfMonth
+            ?? DBNull.Value);
+
+        cmd.Parameters.AddWithValue(
+            "@dow",
+            (object?)rule.DayOfWeek
+            ?? DBNull.Value);
+
+        cmd.Parameters.AddWithValue(
+            "@moy",
+            (object?)rule.MonthOfYear
+            ?? DBNull.Value);
+
+        cmd.Parameters.AddWithValue(
+            "@e",
+            (object?)rule.EndDate
+            ?? DBNull.Value);
+        cmd.Parameters.AddWithValue(
+            "@nrd",
+            (object?)rule.NextRunDate
+            ?? DBNull.Value);
+
+        await con.OpenAsync();
+
+        await cmd.ExecuteNonQueryAsync();
+    }
+
+    public async Task<List<Bill>> GetAllAsync(
+        int userId)
+    {
+        var list = new List<Bill>();
+
+        using var con = _factory.CreateConnection();
+
+        using var cmd = new SqlCommand(
+        @"SELECT BillId,Name,Amount,
+                 CategoryId,PaymentTypeId, Frequency
+          FROM Bills
+          WHERE UserId=@u
+          AND IsActive=1",
+        con);
+
+        cmd.Parameters.AddWithValue("@u", userId);
+
+        await con.OpenAsync();
+
+        using var reader =
+            await cmd.ExecuteReaderAsync();
 
         while (await reader.ReadAsync())
         {
-            var bill = new Bill(
-                reader.GetInt32(1),                            // UserId
-                reader.GetString(2),                           // Category
-                reader.IsDBNull(3) ? null : reader.GetString(3),
-                reader.GetDecimal(4),                          // Amount
-                reader.GetString(5),                           // Frequency
-                reader.GetDateTime(6),                         // StartDate
-                reader.IsDBNull(7) ? null : reader.GetDateTime(7)
-            );
-
-            // Set private fields via reflection-safe method
-            typeof(Bill).GetProperty(nameof(Bill.BillId))!
-                .SetValue(bill, reader.GetInt32(0));
-
-            typeof(Bill).GetProperty(nameof(Bill.CreatedOn))!
-                .SetValue(bill, reader.GetDateTime(9));
-
-            if (!reader.IsDBNull(10))
+            list.Add(new Bill
             {
-                typeof(Bill).GetProperty(nameof(Bill.UpdatedOn))!
-                    .SetValue(bill, reader.GetDateTime(10));
-            }
-
-            bills.Add(bill);
+                BillId = reader.GetInt32(0),
+                Name = reader.GetString(1),
+                Amount = reader.GetDecimal(2),
+                CategoryId = reader.GetInt32(3),
+                PaymentTypeId = reader.GetInt32(4),
+                Frequency = reader.GetString(5),
+                UserId = userId
+            });
         }
 
-        return bills;
+        return list;
     }
 
-    public async Task<List<Bill>> GetMonthlyBillsAsync(int userId, int year, int month)
+    public async Task UpdateAsync(
+        Bill bill)
     {
-        var startOfMonth = new DateTime(year, month, 1);
-        var endOfMonth = startOfMonth.AddMonths(1).AddDays(-1);
+        using var con = _factory.CreateConnection();
 
-        const string sql = @"
-        SELECT BillId, UserId, Category, 
-               Amount, Frequency,  
-               IsActive, CreatedAt, UpdatedAt
-        FROM Bills
-        WHERE UserId = @UserId
-          AND IsActive = 1
-          ";
+        using var cmd = new SqlCommand(
+        @"UPDATE Bills
+          SET Name=@n,
+              Amount=@a,
+              CategoryId=@c,
+              PaymentTypeId=@p
+          WHERE BillId=@id
+          AND UserId=@u",
+        con);
 
-        var bills = new List<Bill>();
+        cmd.Parameters.AddWithValue("@id", bill.BillId);
+        cmd.Parameters.AddWithValue("@u", bill.UserId);
+        cmd.Parameters.AddWithValue("@n", bill.Name);
+        cmd.Parameters.AddWithValue("@a", bill.Amount);
+        cmd.Parameters.AddWithValue("@c", bill.CategoryId);
+        cmd.Parameters.AddWithValue("@p", bill.PaymentTypeId);
 
-        using var conn = new SqlConnection(_connectionString);
-        using var cmd = new SqlCommand(sql, conn);
+        await con.OpenAsync();
 
-        cmd.Parameters.Add("@UserId", SqlDbType.Int).Value = userId;
-        
-
-        await conn.OpenAsync();
-        using var reader = await cmd.ExecuteReaderAsync();
-
-        while (await reader.ReadAsync())
-        {
-            var bill = new Bill(
-                reader.GetInt32(1),
-                reader.GetString(2),
-                reader.IsDBNull(3) ? null : reader.GetString(3),
-                reader.GetDecimal(4),
-                reader.GetString(5),
-                reader.GetDateTime(6),
-                reader.IsDBNull(7) ? null : reader.GetDateTime(7)
-            );
-
-            typeof(Bill).GetProperty(nameof(Bill.BillId))!
-                .SetValue(bill, reader.GetInt32(0));
-
-            bills.Add(bill);
-        }
-
-        return bills;
+        await cmd.ExecuteNonQueryAsync();
     }
 
-    public async Task<bool> DeleteAsync(int billId, int userId)
+    public async Task DeleteAsync(
+        int billId,
+        int userId)
     {
-        const string sql = @"
-        UPDATE Bills
-        SET IsActive = 0,
-            UpdatedOn = SYSUTCDATETIME()
-        WHERE BillId = @BillId
-          AND UserId = @UserId";
+        using var con = _factory.CreateConnection();
 
-        using var conn = new SqlConnection(_connectionString);
-        using var cmd = new SqlCommand(sql, conn);
+        using var cmd = new SqlCommand(
+        @"UPDATE Bills
+          SET IsActive=0
+          WHERE BillId=@id
+          AND UserId=@u",
+        con);
 
-        cmd.Parameters.Add("@BillId", SqlDbType.Int).Value = billId;
-        cmd.Parameters.Add("@UserId", SqlDbType.Int).Value = userId;
+        cmd.Parameters.AddWithValue("@id", billId);
+        cmd.Parameters.AddWithValue("@u", userId);
 
-        await conn.OpenAsync();
-        var rows = await cmd.ExecuteNonQueryAsync();
+        await con.OpenAsync();
 
-        return rows > 0;
+        await cmd.ExecuteNonQueryAsync();
     }
 }

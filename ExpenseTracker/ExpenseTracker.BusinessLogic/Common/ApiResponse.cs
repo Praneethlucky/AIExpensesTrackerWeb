@@ -2,10 +2,10 @@
 
 public class ApiResponse<T>
 {
-    public bool Success { get; set; }
-    public string Message { get; set; }
-    public T Data { get; set; }
-    public List<string> Errors { get; set; }
+    public bool success { get; set; }
+    public string message { get; set; }
+    public T data { get; set; }
+    public string errorCode { get; set; }
 
     public static ApiResponse<T> SuccessResponse(
         T data,
@@ -13,23 +13,22 @@ public class ApiResponse<T>
     {
         return new ApiResponse<T>
         {
-            Success = true,
-            Message = message,
-            Data = data,
-            Errors = null
+            success = true,
+            message = message,
+            data = data,
         };
     }
 
     public static ApiResponse<T> FailureResponse(
-        List<string> errors,
+        string errors,
         string message = "")
     {
         return new ApiResponse<T>
         {
-            Success = false,
-            Message = message,
-            Data = default,
-            Errors = errors
+            success = false,
+            message = message,
+            data = default,
+            errorCode = errors
         };
     }
 }

@@ -1,6 +1,8 @@
 ﻿public class LoginResponseDto
 {
-    public int UserId { get; set; }
-    public string FullName { get; set; }
-    public string Token { get; set; } = "Test";
+    public string AccessToken { get; set; }
+
+    public string RefreshToken { get; set; }
+    public DateTime ExpiresAt { get; set; }
+
 }

@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace ExpenseTracker.Domain.Entities;
+namespace ExpenseTracker.Infrastructure.Entities;
 
 public class AIInsight
 {

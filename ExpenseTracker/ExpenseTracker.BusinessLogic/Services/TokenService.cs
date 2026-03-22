@@ -1,63 +1,51 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using ExpenseTracker.Domain.Configurations;
+using ExpenseTracker.Infrastructure.Entities;
+using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 
-namespace ExpenseTracker.BusinessLogic.Services
+public class TokenService
 {
-    using ExpenseTracker.Domain.Entities;
-    using Microsoft.IdentityModel.Tokens;
-    using System.IdentityModel.Tokens.Jwt;
-    using System.Security.Claims;
-    using System.Security.Cryptography;
-    using System.Text;
-    using Microsoft.Extensions.Options;
+    private readonly JwtOptions _jwt;
 
-    public class TokenService
+    public TokenService(IOptions<JwtOptions> jwtOptions)
     {
-        private readonly IConfiguration _config;
+        _jwt = jwtOptions.Value;
+    }
 
-        public TokenService(IConfiguration config)
-        {
-            _config = config;
-        }
+    public string GenerateAccessToken(User user)
+    {
+        var key = new SymmetricSecurityKey(
+            Encoding.UTF8.GetBytes(_jwt.Key));
 
-        public string GenerateAccessToken(User user)
+        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+        var claims = new[]
         {
-            var claims = new[]
-            {
-            new Claim(ClaimTypes.NameIdentifier,user.Id.ToString()),
-            new Claim(ClaimTypes.Email,user.Email),
-            new Claim(ClaimTypes.Name,user.Name)
+            new Claim(ClaimTypes.NameIdentifier,user.UserId.ToString()),
+            new Claim(ClaimTypes.Email,user.Email)
         };
 
-            var key = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(_config["Jwt:Key"])
-            );
+        var token = new JwtSecurityToken(
+            issuer: _jwt.Issuer,
+            audience: _jwt.Audience,
+            claims: claims,
+            expires: DateTime.UtcNow.AddMinutes(_jwt.AccessTokenMinutes),
+            signingCredentials: creds);
 
-            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+        return new JwtSecurityTokenHandler().WriteToken(token);
+    }
 
-            var token = new JwtSecurityToken(
-                issuer: _config["Jwt:Issuer"],
-                audience: _config["Jwt:Audience"],
-                claims: claims,
-                expires: DateTime.UtcNow.AddMinutes(
-                    int.Parse(_config["Jwt:AccessTokenMinutes"])
-                ),
-                signingCredentials: creds
-            );
+    public string GenerateRefreshToken()
+    {
+        var randomBytes = new byte[64];
 
-            return new JwtSecurityTokenHandler().WriteToken(token);
-        }
+        using var rng = RandomNumberGenerator.Create();
+        rng.GetBytes(randomBytes);
 
-        public string GenerateRefreshToken()
-        {
-            var bytes = new byte[64];
-
-            using var rng = RandomNumberGenerator.Create();
-
-            rng.GetBytes(bytes);
-
-            return Convert.ToBase64String(bytes);
-        }
+        return Convert.ToBase64String(randomBytes);
     }
 }

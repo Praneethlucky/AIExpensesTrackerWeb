@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using ExpenseTracker.Domain.Interfaces;
+using ExpenseTracker.Infrastructure.Interfaces;
 using ExpenseTracker.Infrastructure.Persistence;
 using ExpenseTracker.Infrastructure.AI;
 using ExpenseTracker.Infrastructure.Configuration;

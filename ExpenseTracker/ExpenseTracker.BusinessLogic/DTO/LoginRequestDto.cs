@@ -12,5 +12,4 @@ public class LoginRequestDto
 
     public string DeviceId { get; set; }
 
-    public string DeviceName { get; set; }
 }

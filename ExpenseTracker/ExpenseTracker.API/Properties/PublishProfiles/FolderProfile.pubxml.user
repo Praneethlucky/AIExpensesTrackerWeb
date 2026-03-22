@@ -1,0 +1,9 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!-- https://go.microsoft.com/fwlink/?LinkID=208121. -->
+<Project>
+  <PropertyGroup>
+    <_PublishTargetUrl>C:\inetpub\iis-deployments\ExpenseTracker\ExpenseTrackerAPI</_PublishTargetUrl>
+    <History>True|2026-03-20T22:47:05.0706695Z||;True|2026-03-21T04:02:13.1134579+05:30||;False|2026-03-21T04:01:44.1787335+05:30||;False|2026-03-21T04:01:22.1828283+05:30||;True|2026-03-21T04:01:08.0246822+05:30||;True|2026-03-18T01:35:31.5761903+05:30||;True|2026-03-18T01:22:37.0361819+05:30||;True|2026-03-10T05:03:32.7686540+05:30||;</History>
+    <LastFailureDetails />
+  </PropertyGroup>
+</Project>

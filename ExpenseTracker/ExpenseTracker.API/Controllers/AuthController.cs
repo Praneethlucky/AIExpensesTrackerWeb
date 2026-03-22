@@ -1,54 +1,67 @@
-﻿using ExpenseTracker.BusinessLogic.Interfaces;
-using Microsoft.AspNetCore.Mvc;
+﻿using Azure;
 using ExpenseTracker.BusinessLogic.Common;
-
+using ExpenseTracker.Infrastructure.Entities;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity.Data;
+using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/auth")]
 public class AuthController : ControllerBase
 {
-    private readonly IUserService _userService;
+    private readonly AuthService _authService;
 
-    public AuthController(IUserService userService)
+    public AuthController(AuthService authService)
     {
-        _userService = userService;
+        _authService = authService;
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> Check()
+    {
+
+        return Ok(ApiResponse<object>.SuccessResponse("Checked In successfully"));
     }
 
     [HttpPost("login")]
-    public async Task<IActionResult> Login([FromBody] LoginRequestDto request)
+    public async Task<IActionResult> Login(LoginRequestDto request)
     {
-        var result = await _userService.LoginAsync(request);
+        var response = await _authService.Login(request);
 
-        if (result == null)
-            return Unauthorized(
-                ApiResponse<string>.FailureResponse(
-                    new List<string> { "Invalid credentials" }));
-
-        return Ok(ApiResponse<LoginResponseDto>
-            .SuccessResponse(result, "Login successful"));
+        return Ok(ApiResponse<object>.SuccessResponse(response, "Logged In successfully"));
     }
 
-    //[HttpPost("register")]
-    //public async Task<IActionResult> Register([FromBody] RegisterRequestDto request)
-    //{
-    //    var success = await _userService.RegisterAsync(request);
-
-    //    if (!success)
-    //        return BadRequest(ApiResponse<string>
-    //            .FailureResponse(new List<string> { "Registration failed" }));
-
-    //    return Ok(ApiResponse<string>
-    //        .SuccessResponse("User created"));
-    //}
-
-    [HttpPut("update-salary")]
-    public async Task<IActionResult> UpdateSalary(int userId, decimal salary)
+    [HttpPost("refresh")]
+    public async Task<IActionResult> Refresh(RefreshRequest request)
     {
-        var result = await _userService.UpdateSalaryAsync(userId, salary);
+        var response = await _authService.Refresh(request.RefreshToken);
 
-        if (!result)
-            return NotFound("User not found");
+        return Ok(response);
+    }
 
-        return Ok("Salary updated successfully");
+    [HttpPost("logout")]
+    public async Task<IActionResult> Logout(LogoutRequestDto request)
+    {
+        await _authService.Logout(request.RefreshToken);
+
+        return Ok(ApiResponse<object>.SuccessResponse(new
+        {
+            Success = true
+        }, "User Logged Out successfully"));
+    }
+
+    [Authorize]
+    [HttpPost("logout-all")]
+    public async Task<IActionResult> LogoutAll()
+    {
+        var userId = Int32.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
+
+        await _authService.LogoutAll(userId);
+
+        return Ok(ApiResponse<object>.SuccessResponse(new
+        {
+            Success = true
+        }, "Logged Out of All devices successfully"));
     }
 }

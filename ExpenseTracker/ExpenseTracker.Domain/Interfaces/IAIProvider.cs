@@ -1,4 +1,4 @@
-﻿namespace ExpenseTracker.Domain.Interfaces;
+﻿namespace ExpenseTracker.Infrastructure.Interfaces;
 
 public interface IAIProvider
 {
